@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Enkripsi Rahasia</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <style>
+        /* Gaya untuk efek kaca */
+        .glass-effect {
+            background: rgba(90, 62, 170, 0.8);
+            backdrop-filter: blur(12px);
+        }
+        /* Gaya untuk tombol gradien */
+        .gradient-btn {
+            background: linear-gradient(135deg, #8561f8 0%, #9c6eff 100%);
+        }
+        .gradient-btn:hover {
+            background: linear-gradient(135deg, #9c6eff 0%, #8561f8 100%);
+        }
+        /* Gaya untuk tombol sidebar saat hover */
+        .sidebar-btn:hover {
+            background-color: #5a3eaa;
+        }
+        /* Gaya untuk textarea dan input */
+        textarea, input {
+            background-color: #2c2c44;
+            border-color: #5a3eaa;
+        }
+        /* Gaya untuk item catatan saat hover */
+        .note-item:hover {
+            background-color: rgba(90, 62, 170, 0.3);
+        }
+        /* Gaya untuk item catatan yang dipilih */
+        .note-item.selected {
+            background-color: #9671ff;
+            color: #1e1e2f;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white min-h-screen">
+    <div class="flex flex-col min-h-screen">
+        <!-- Header -->
+        <header class="glass-effect py-4 px-6 border-b border-white/10">
+            <h1 class="text-2xl font-bold">Sistem Enkripsi Rahasia</h1>
+        </header>
+
+        <!-- Konten Utama -->
+        <div class="flex flex-1">
+            <!-- Sidebar -->
+            <aside class="w-64 glass-effect rounded-r-xl p-4 flex flex-col">
+                <button id="btnEncrypt" class="sidebar-btn text-left py-3 px-4 rounded-lg mb-2 transition">Enkripsi</button>
+                <button id="btnDecrypt" class="sidebar-btn text-left py-3 px-4 rounded-lg mb-2 transition">Dekripsi</button>
+                <button id="btnNotes" class="sidebar-btn text-left py-3 px-4 rounded-lg mb-2 transition">Catatan Rahasia</button>
+                <div class="mt-auto text-xs opacity-70">
+                    © 2024 Sistem Enkripsi Rahasia
+                </div>
+            </aside>
+
+            <!-- Panel Utama -->
+            <main class="flex-1 p-6">
+                <!-- Panel Enkripsi -->
+                <div id="encryptPanel" class="space-y-4">
+                    <h2 class="text-xl font-semibold">Enkripsi Data</h2>
+                    <div>
+                        <label class="block mb-2 font-medium">Masukkan data untuk dienkripsi:</label>
+                        <textarea id="plainText" class="w-full p-3 rounded-lg" rows="4" placeholder="Masukkan data rahasia Anda di sini..."></textarea>
+                    </div>
+                    <div>
+                        <label class="block mb-2 font-medium">Kata Sandi Enkripsi:</label>
+                        <input id="encryptPassword" type="password" class="w-full p-3 rounded-lg" placeholder="Masukkan kata sandi (minimal 6 karakter)">
+                    </div>
+                    <button id="btnDoEncrypt" class="gradient-btn py-3 px-6 rounded-lg font-bold transition">Enkripsi</button>
+                    <div>
+                        <label class="block mb-2 font-medium">Hasil Enkripsi:</label>
+                        <textarea id="encryptedResult" class="w-full p-3 rounded-lg" rows="4" readonly></textarea>
+                    </div>
+                </div>
+
+                <!-- Panel Dekripsi -->
+                <div id="decryptPanel" class="space-y-4 hidden">
+                    <h2 class="text-xl font-semibold">Dekripsi Data</h2>
+                    <div>
+                        <label class="block mb-2 font-medium">Masukkan data terenkripsi untuk didekripsi:</label>
+                        <textarea id="encryptedText" class="w-full p-3 rounded-lg" rows="4" placeholder="Masukkan teks terenkripsi..."></textarea>
+                    </div>
+                    <div>
+                        <label class="block mb-2 font-medium">Kata Sandi Dekripsi:</label>
+                        <input id="decryptPassword" type="password" class="w-full p-3 rounded-lg" placeholder="Masukkan kata sandi yang digunakan saat enkripsi">
+                    </div>
+                    <button id="btnDoDecrypt" class="gradient-btn py-3 px-6 rounded-lg font-bold transition">Dekripsi</button>
+                    <div>
+                        <label class="block mb-2 font-medium">Hasil Dekripsi:</label>
+                        <textarea id="decryptedResult" class="w-full p-3 rounded-lg" rows="4" readonly></textarea>
+                    </div>
+                </div>
+
+                <!-- Panel Catatan -->
+                <div id="notesPanel" class="hidden">
+                    <div class="flex space-x-6">
+                        <!-- Daftar Catatan -->
+                        <div class="w-64 bg-gray-800 rounded-lg p-4">
+                            <h2 class="text-xl font-semibold mb-4">Daftar Catatan</h2>
+                            <div id="notesList" class="space-y-2 max-h-[500px] overflow-y-auto">
+                                <!-- Catatan akan ditambahkan di sini secara dinamis -->
+                            </div>
+                            <button id="btnNewNote" class="gradient-btn w-full py-2 px-4 rounded-lg mt-4 font-bold transition">Catatan Baru</button>
+                        </div>
+
+                        <!-- Detail Catatan -->
+                        <div class="flex-1 space-y-4">
+                            <h2 class="text-xl font-semibold">Detail Catatan</h2>
+                            <div>
+                                <label class="block mb-2 font-medium">Judul Catatan:</label>
+                                <input id="noteTitle" type="text" class="w-full p-3 rounded-lg" placeholder="Masukkan judul catatan">
+                            </div>
+                            <div>
+                                <label class="block mb-2 font-medium">Isi Catatan:</label>
+                                <textarea id="noteContent" class="w-full p-3 rounded-lg" rows="6" placeholder="Masukkan isi catatan (akan dienkripsi)"></textarea>
+                            </div>
+                            <div>
+                                <label class="block mb-2 font-medium">Kata Sandi:</label>
+                                <input id="notePassword" type="password" class="w-full p-3 rounded-lg" placeholder="Masukkan kata sandi untuk enkripsi/dekripsi">
+                            </div>
+                            <div class="flex space-x-4">
+                                <button id="btnShowContent" class="gradient-btn py-2 px-4 rounded-lg font-bold transition">Tampilkan Isi</button>
+                                <button id="btnSaveNote" class="gradient-btn py-2 px-4 rounded-lg font-bold transition">Simpan</button>
+                                <button id="btnDeleteNote" class="bg-red-600 hover:bg-red-700 py-2 px-4 rounded-lg font-bold transition">Hapus</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <!-- Status Bar -->
+        <footer class="glass-effect py-2 px-6 text-sm">
+            <span id="statusText">Siap</span>
+        </footer>
+    </div>
+
+    <script>
+        // Fungsi untuk enkripsi teks
+        function encryptText(text, password) {
+            try {
+                // Memastikan kata sandi minimal 6 karakter
+                if (password.length < 6) {
+                    throw new Error("Kata sandi harus minimal 6 karakter");
+                }
+                
+                // Membuat nilai acak dan kunci untuk enkripsi
+                const salt = CryptoJS.lib.WordArray.random(128/8);
+                const key = CryptoJS.PBKDF2(password, salt, {
+                    keySize: 256/32,
+                    iterations: 1000
+                });
+                
+                // Membuat iv untuk enkripsi, agar tidak menghasilkan ciphertext yang sama
+                const iv = CryptoJS.lib.WordArray.random(128/8);
+                const encrypted = CryptoJS.AES.encrypt(text, key, { 
+                    iv: iv,
+                    padding: CryptoJS.pad.Pkcs7,
+                    mode: CryptoJS.mode.CBC
+                });
+                
+                // Menggabungkan salt, iv, dan ciphertext (menghasilkan nilai acak pada data yang telah terenkripsi)
+                const result = {
+                    salt: salt.toString(),
+                    iv: iv.toString(),
+                    ciphertext: encrypted.toString()
+                };
+                
+                return JSON.stringify(result);
+            } catch (error) {
+                throw error;
+            }
+        }
+
+        // Fungsi untuk mendekripsikan teks
+        function decryptText(encryptedData, password) {
+            try {
+                // Memastikan kata sandi minimal 6 karakter
+                if (password.length < 6) {
+                    throw new Error("Kata sandi harus minimal 6 karakter");
+                }
+                
+                // Menguraikan data yang terenkripsi
+                const data = JSON.parse(encryptedData);
+                const salt = CryptoJS.enc.Hex.parse(data.salt);
+                const iv = CryptoJS.enc.Hex.parse(data.iv);
+                
+                // Membuat kunci untuk dekripsi
+                const key = CryptoJS.PBKDF2(password, salt, {
+                    keySize: 256/32,
+                    iterations: 1000
+                });
+                
+                // Mendekripsikan data
+                const decrypted = CryptoJS.AES.decrypt(data.ciphertext, key, { 
+                    iv: iv,
+                    padding: CryptoJS.pad.Pkcs7,
+                    mode: CryptoJS.mode.CBC
+                });
+                
+                return decrypted.toString(CryptoJS.enc.Utf8);
+            } catch (error) {
+                throw new Error("Gagal mendekripsi: kata sandi salah atau data rusak");
+            }
+        }
+
+        // Manajemen catatan
+        let notes = JSON.parse(localStorage.getItem('secretNotes')) || [];
+        let currentNoteIndex = -1;
+
+        // Fungsi untuk menyimpan catatan ke penyimpanan program
+        function saveNotes() {
+            localStorage.setItem('secretNotes', JSON.stringify(notes));
+        }
+
+        // Fungsi untuk menampilkan list daftar catatan
+        function renderNotesList() {
+            const notesList = document.getElementById('notesList');
+            notesList.innerHTML = '';
+            
+            notes.forEach((note, index) => {
+                const noteElement = document.createElement('div');
+                noteElement.className = `note-item p-3 rounded-lg cursor-pointer transition ${currentNoteIndex === index ? 'selected' : ''}`;
+                noteElement.textContent = note.title || '(Tanpa Judul)';
+                noteElement.addEventListener('click', () => loadNote(index));
+                notesList.appendChild(noteElement);
+            });
+        }
+
+        // Fungsi untuk memuat catatan yang dipilih
+        function loadNote(index) {
+            if (index < 0 || index >= notes.length) return;
+            
+            currentNoteIndex = index;
+            const note = notes[index];
+            
+            document.getElementById('noteTitle').value = note.title || '';
+            document.getElementById('noteContent').value = note.content || '';
+            document.getElementById('notePassword').value = '';
+            
+            renderNotesList();
+            updateStatus(`Memuat catatan: ${note.title || ''}`);
+        }
+
+        // Fungsi untuk membersihkan form catatan
+        function clearNoteForm() {
+            currentNoteIndex = -1;
+            document.getElementById('noteTitle').value = '';
+            document.getElementById('noteContent').value = '';
+            document.getElementById('notePassword').value = '';
+            renderNotesList();
+            updateStatus('Buat catatan baru.');
+        }
+
+        // Fungsi untuk menyimpan catatan
+        function saveNote() {
+            const title = document.getElementById('noteTitle').value.trim();
+            const content = document.getElementById('noteContent').value.trim();
+            const password = document.getElementById('notePassword').value.trim();
+            
+            if (!title) {
+                showError('Judul catatan tidak boleh kosong');
+                return;
+            }
+            
+            if (password.length < 6) {
+                showError('Kata sandi harus minimal 6 karakter untuk menyimpan catatan');
+                return;
+            }
+            
+            try {
+                // Mencoba mendekripsi terlebih dahulu untuk melihat apakah konten sudah terenkripsi
+                let encryptedContent;
+                try {
+                    JSON.parse(content);
+                    // Jika konten adalah JSON yang valid, anggap sudah terenkripsi
+                    encryptedContent = content;
+                } catch {
+                    // Jika tidak, enkripsi konten
+                    encryptedContent = encryptText(content, password);
+                }
+                
+                const noteData = {
+                    title,
+                    content: encryptedContent,
+                    createdAt: new Date().toISOString()
+                };
+                
+                if (currentNoteIndex >= 0 && currentNoteIndex < notes.length) {
+                    // Memperbarui catatan yang ada
+                    notes[currentNoteIndex] = noteData;
+                } else {
+                    // Menambahkan catatan baru
+                    notes.push(noteData);
+                    currentNoteIndex = notes.length - 1;
+                }
+                
+                saveNotes();
+                renderNotesList();
+                updateStatus(`Catatan "${title}" berhasil disimpan`);
+            } catch (error) {
+                showError(error.message);
+            }
+        }
+
+        // Fungsi untuk menghapus catatan
+        function deleteNote() {
+            if (currentNoteIndex < 0 || currentNoteIndex >= notes.length) {
+                showError('Pilih catatan yang akan dihapus');
+                return;
+            }
+            
+            const noteTitle = notes[currentNoteIndex].title || '';
+            if (confirm(`Apakah Anda yakin ingin menghapus catatan "${noteTitle}"?`)) {
+                notes.splice(currentNoteIndex, 1);
+                saveNotes();
+                clearNoteForm();
+                updateStatus(`Catatan "${noteTitle}" dihapus`);
+            }
+        }
+
+        // Fungsi untuk menampilkan isi catatan
+        function showNoteContent() {
+            if (currentNoteIndex < 0 || currentNoteIndex >= notes.length) {
+                showError('Pilih catatan terlebih dahulu');
+                return;
+            }
+            
+            const password = document.getElementById('notePassword').value.trim();
+            if (password.length < 6) {
+                showError('Kata sandi harus minimal 6 karakter');
+                return;
+            }
+            
+            try {
+                const note = notes[currentNoteIndex];
+                const decryptedContent = decryptText(note.content, password);
+                alert(`Isi catatan:\n\n${decryptedContent}`);
+                updateStatus(`Isi catatan berhasil ditampilkan`);
+            } catch (error) {
+                showError(error.message);
+            }
+        }
+
+        // Fungsi dalam penyempurnaan UI pada program
+        function updateStatus(message) {
+            document.getElementById('statusText').textContent = message;
+        }
+
+        function showError(message) {
+            alert(`Error: ${message}`);
+            updateStatus(`Error: ${message}`);
+        }
+
+        // Fungsi untuk menampilkan panel yang sesuai
+        function showPanel(panelId) {
+            document.getElementById('encryptPanel').classList.add('hidden');
+            document.getElementById('decryptPanel').classList.add('hidden');
+            document.getElementById('notesPanel').classList.add('hidden');
+            
+            document.getElementById(panelId).classList.remove('hidden');
+            updateStatus(`Halaman: ${panelId.replace('Panel', '').replace('encrypt', 'Enkripsi').replace('decrypt', 'Dekripsi').replace('notes', 'Catatan')}`);
+        }
+
+        // Event Listeners / interaksi pengguna terhadap elemen di halaman web.
+        document.getElementById('btnEncrypt').addEventListener('click', () => showPanel('encryptPanel'));
+        document.getElementById('btnDecrypt').addEventListener('click', () => showPanel('decryptPanel'));
+        document.getElementById('btnNotes').addEventListener('click', () => {
+            showPanel('notesPanel');
+            renderNotesList();
+        });
+
+        document.getElementById('btnDoEncrypt').addEventListener('click', () => {
+            const plainText = document.getElementById('plainText').value.trim();
+            const password = document.getElementById('encryptPassword').value.trim();
+            
+            try {
+                const encrypted = encryptText(plainText, password);
+                document.getElementById('encryptedResult').value = encrypted;
+                updateStatus('Berhasil mengenkripsi data');
+            } catch (error) {
+                showError(error.message);
+            }
+        });
+
+        document.getElementById('btnDoDecrypt').addEventListener('click', () => {
+            const encryptedText = document.getElementById('encryptedText').value.trim();
+            const password = document.getElementById('decryptPassword').value.trim();
+            
+            try {
+                const decrypted = decryptText(encryptedText, password);
+                document.getElementById('decryptedResult').value = decrypted;
+                updateStatus('Berhasil mendekripsi data');
+            } catch (error) {
+                showError(error.message);
+            }
+        });
+
+        document.getElementById('btnNewNote').addEventListener('click', clearNoteForm);
+        document.getElementById('btnSaveNote').addEventListener('click', saveNote);
+        document.getElementById('btnDeleteNote').addEventListener('click', deleteNote);
+        document.getElementById('btnShowContent').addEventListener('click', showNoteContent);
+
+        // Inisialisasi (untuk memastikan sistem dalam keadaan siap)
+        showPanel('encryptPanel');
+        updateStatus('Siap');
+    </script>
+</body>
+</html>
